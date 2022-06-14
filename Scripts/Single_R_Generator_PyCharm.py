@@ -137,10 +137,10 @@ def gendata(T, dt, noise=2, plot=True, output=True):
 
 curve = (gendata(T, 1 / 1200))
 
-print(len(mmdata))
-print(len(curve[1]))
+#print(len(mmdata))
+#print(len(curve[1]))
 
-strength = 10
+strength = 20
 yinjected = []
 for i in range(len(mmdata)):
     yinjected.append(abs(mmdata[i] + strength * rms * curve[1][i]))
@@ -162,14 +162,15 @@ def model(t,A,B):
 best_params, cov_matrix = so.curve_fit(model, xdata = ycurve, ydata = ydata, p0 = [200,0])
 plt.figure()
 plt.plot(ycurve, model(ycurve, best_params[0], best_params[1]), 'r-', label = 'Fit')
-plt.xlabel('Time(s)')
-plt.ylabel('Inverse of Magnitude')
-plt.title('Fit to Inverse in Time Domain (Limited Domain)')
+plt.xlabel('Generated Sample Light Curve (V)')
+plt.ylabel('ECM Data with Injected Light Curve (V)')
+plt.title('Correlation Between Sample Curve and Injected Curve')
 
 corr_matrix = np.corrcoef(ycurve, ydata)
 corr = corr_matrix[0,1]
 
-print(corr)
+print('R: ',corr)
+#print(best_params[0])
 
 plt.scatter(ycurve, ydata)
 
