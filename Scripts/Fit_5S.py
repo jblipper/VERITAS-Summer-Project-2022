@@ -175,12 +175,13 @@ def getcorrelation(datafile, N, a, b, dt, strength=1, plot1=False, plot2=False, 
 #getcorrelation('20220104-FRB180814.J422+73-T1.csv', 10, 250, 1250, 1 / 1200, strength=5, plot1=True, plot2=True, showrs=True, printoutput=True, histogram=True)
 #plt.show()
 
-x=np.linspace(0,10,4)
+x=np.linspace(0,10,11)
 strengths=list(x)
 r=[]
 error=[]
 for i in tqdm(strengths):
-    v=getcorrelation('20220104-FRB180814.J422+73-T1.csv',10,450,550,1/1200,strength=i,histogram=True)
+    v=getcorrelation('20220104-FRB180814.J422+73-T1.csv',40,450,550,1/1200,strength=i,histogram=True)
+    plt.savefig('Distribution of Correlation Coefficients at Strength:' + str(i) + '.png')
     r.append(v[0])
     error.append(v[1][1])
 plt.figure()
@@ -190,7 +191,12 @@ plt.title('Strength of Correlation at Different Strengths of Injected Signal')
 plt.xlabel('Relative Strength of Injected Signal')
 plt.ylabel('Average Correlation Coefficient (4 Trials)')
 
+def model1(t,A):
+    return 1-(1/(np.e**(A*t)))
 
+sstrengths=np.linspace(0,10,1000)
+best_params1, cov_matrix1 = so.curve_fit(model1, xdata = strengths, ydata = r, p0 = [1])
+plt.plot(sstrengths, model1(sstrengths, best_params1[0]), 'r-', label = 'Fit')
 
 plt.savefig('Strength of Correlation at Different Strengths of Injected Signal')
 
@@ -200,7 +206,6 @@ plt.plot(strengths,fity,'.')
 plt.xlabel('Strength')
 plt.ylabel('R To Error Ratio')
 plt.title('R To Error Ratio At Range Of Strengths')
-plt.savefig('R To Error Ratio')
 
 def model(t,A,B):
     return A*t**B
@@ -211,9 +216,17 @@ S5=5*np.ones(1000)
 plt.plot(sstrengths, model(sstrengths, best_params[0], best_params[1]), 'r-', label = 'Fit')
 plt.plot(sstrengths,S5, label = 'S5')
 plt.legend()
+plt.savefig('R To Error Ratio')
 
 crits=(5/best_params[0])**(1/best_params[1])
 print(crits)
+
+critr=model1(crits,best_params1[0])
+print(critr)
+
+with open('Results.txt', 'a') as f:
+    f.writelines('\n\n'+'Number of Sampled Strengths: '+str(11)+', Number of Rs per Gaussian Fit: '+str(40)+', Critical Strength: '+str(crits)+', Critical R: '+str(critr))
+f.close()
 
 plt.show()
 
