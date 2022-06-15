@@ -99,7 +99,7 @@ def gendata(T, dt, noise=2, plot=True, output=True):
         return tr, mr
 
 
-def getcorrelation(datafile, N, a, b, dt, strength=1, plot1=False, plot2=False, showrs=False, printoutput=False, histogram=False):
+def getcorrelation(datafile, N, a, b, dt, strength=1, plot1=False, plot2=False, showrs=False, printoutput=False, histogram=False, crit=False):
     data = np.genfromtxt(datafile, delimiter=',')
     tdata = []
     mdata = []
@@ -165,7 +165,10 @@ def getcorrelation(datafile, N, a, b, dt, strength=1, plot1=False, plot2=False, 
     if histogram == True:
         plt.figure()
         t = plt.hist(rs, 10, )
-        plt.title('Distribution of Correlation Coefficients')
+        if crit==True:
+            plt.title('Distribution of Correlation Coefficients at Critical Strength: '+str(strength))
+        else:
+            plt.title('Distribution of Correlation Coefficients at Strength: ' + str(strength))
         plt.xlabel('Correlation Coefficient (R)')
         plt.ylabel('Number of Occurrences')
         plt.plot(Rrange, yR)
@@ -175,20 +178,20 @@ def getcorrelation(datafile, N, a, b, dt, strength=1, plot1=False, plot2=False, 
 #getcorrelation('20220104-FRB180814.J422+73-T1.csv', 10, 250, 1250, 1 / 1200, strength=5, plot1=True, plot2=True, showrs=True, printoutput=True, histogram=True)
 #plt.show()
 
-def find5S(Nstrengths,trials,A,B,dt,histogram=False,plot1=False,plot2=False,savedata=True):
+def find5S(datafile,Nstrengths,trials,A,B,dt,histogram=False,plot1=False,plot2=False,crithistogram=False,savedata=True):
     x=np.linspace(0,10,Nstrengths)
     strengths=list(x)
     r=[]
     error=[]
     if histogram==True:
         for i in tqdm(strengths):
-            v = getcorrelation('20220104-FRB180814.J422+73-T1.csv', trials, A, B, dt, strength=i, histogram=True)
+            v = getcorrelation(datafile, trials, A, B, dt, strength=i, histogram=True)
             plt.savefig('Distribution of Correlation Coefficients at Strength:' + str(i) + '.png')
             r.append(v[0])
             error.append(v[1][1])
     else:
         for i in tqdm(strengths):
-            v=getcorrelation('20220104-FRB180814.J422+73-T1.csv',trials,A,B,dt,strength=i,histogram=False)
+            v=getcorrelation(datafile,trials,A,B,dt,strength=i,histogram=False)
             r.append(v[0])
             error.append(v[1][1])
     def model1(t,A):
@@ -226,14 +229,21 @@ def find5S(Nstrengths,trials,A,B,dt,histogram=False,plot1=False,plot2=False,save
     crits=(5/best_params[0])**(1/best_params[1])
     critr=model1(crits,best_params1[0])
 
+    if crithistogram==True:
+        h = getcorrelation('20220104-FRB180814.J422+73-T1.csv', trials, A, B, dt, strength=crits, histogram=True,crit=True)
+        plt.savefig('Distribution of Correlation Coefficients at Critical Strength:' + str(crits) + '.png')
+
+    if histogram==True or plot1==True or plot2==True or crithistogram==True:
+        plt.show()
+
     if savedata==True:
         with open('Results.txt', 'a') as f:
             f.writelines('\n\n'+'Number of Sampled Strengths: '+str(Nstrengths)+', Number of Rs per Gaussian Fit: '+str(trials)+', Critical Strength: '+str(crits)+', Critical R: '+str(critr))
         f.close()
-    if histogram==True or plot1==True or plot2==True:
-        plt.show()
     return (crits,critr)
 
-x=find5S(4,4,450,550,1/1200,histogram=False,plot1=True,plot2=True,savedata=True)
+x=find5S('20220104-FRB180814.J422+73-T1.csv',4,4,450,550,1/1200,histogram=False,plot1=True,plot2=True,crithistogram=True,savedata=True)
 print(x)
+
+print('xx')
 
