@@ -6,6 +6,8 @@ from tqdm import tqdm
 import scipy.optimize as so
 import multiprocessing
 from multiprocessing import Process, Manager
+import datetime
+import os
 
 
 def invF(dt, A, xlimf='none', xlimt='none', plot='yes', output='no', absolute='yes', norm='no',
@@ -101,7 +103,7 @@ def gendata(T, dt, noise=2, plot=True, output=True):
         return tr, mr
 
 
-def getcorrelation(datafile, Detector, N, a, b, dt, strength=1, plot1=False, plot2=False, showrs=False, printoutput=False, histogram=False, crit=False, r=[], error=[] ,ostrengths=[]):
+def getcorrelation(datafile, Detector, N, a, b, dt, strength=1, plot1=False, plot2=False, showrs=False, printoutput=False, histogram=False, crit=False, r=[], error=[] ,ostrengths=[], grms=[] ,foldername=''):
     data = np.genfromtxt(datafile, delimiter=',')
     tdata = []
     mdata = []
@@ -169,16 +171,22 @@ def getcorrelation(datafile, Detector, N, a, b, dt, strength=1, plot1=False, plo
         t = plt.hist(rs, 10, )
         if crit==True:
             plt.title('Distribution of Correlation Coefficients at Critical Strength: '+str(strength))
+            plt.xlabel('Correlation Coefficient (R)')
+            plt.ylabel('Number of Occurrences')
+            plt.plot(Rrange, yR)
+            plt.savefig(f'{foldername}/Distribution of Correlation Coefficients at Critical Strength:{str(strength)}.png')
         else:
             plt.title('Distribution of Correlation Coefficients at Strength: ' + str(strength))
-        plt.xlabel('Correlation Coefficient (R)')
-        plt.ylabel('Number of Occurrences')
-        plt.plot(Rrange, yR)
-        plt.savefig('Distribution of Correlation Coefficients at Strength:' + str(i) + '.png')
+            plt.xlabel('Correlation Coefficient (R)')
+            plt.ylabel('Number of Occurrences')
+            plt.plot(Rrange, yR)
+            plt.savefig(f'{foldername}/Distribution of Correlation Coefficients at Strength:{str(strength)}.png')
+            #plt.show()
     v=([rmean, (sigma, gsigma)])
     r.append(v[0])
     error.append(v[1][1])
     ostrengths.append(strength)
+    grms.append(rms)
     return rmean, (sigma, gsigma)
 
 
@@ -190,21 +198,25 @@ def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=Fals
     strengths=list(x)
     #r=[]
     if __name__ == '__main__':
+        foldername = 'run_' + str(datetime.datetime.now())[:10] + '_' + str(datetime.datetime.now())[11:16]
+        os.mkdir(foldername, mode=0o777)
         #error = []
         with Manager() as manager:
             r = manager.list()
             error = manager.list()
             ostrengths=manager.list()
+            grms=manager.list()
             arguments = []
             processes = []
             for i in tqdm(strengths):
-                arguments.append([datafile, Detector, trials, A, B, dt, i, False, False, False, False, histogram, False, r, error, ostrengths])
+                arguments.append([datafile, Detector, trials, A, B, dt, i, False, False, False, False, histogram, False, r, error, ostrengths, grms, foldername])
             for i in range(Nstrengths):
                 p = multiprocessing.Process(target=getcorrelation, args=arguments[i])
                 p.start()
                 processes.append(p)
             for process in processes:
                 process.join()
+            print(grms)
             def model1(t,A):
                 return 1-(1/(np.e**(A*t)))
             sstrengths=np.linspace(0,10,1000)
@@ -217,13 +229,15 @@ def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=Fals
                 plt.xlabel('Relative Strength of Injected Signal')
                 plt.ylabel('Average Correlation Coefficient (4 Trials)')
                 plt.plot(sstrengths, model1(sstrengths, best_params1[0]), 'r-', label = 'Fit')
-                plt.savefig('Strength of Correlation at Different Strengths of Injected Signal')
+                plt.savefig(f'{foldername}/Strength of Correlation at Different Strengths of Injected Signal')
             fity=np.array(r)/np.array(error)
 
             def model(t,A,B):
                 return A*t**B
 
-            best_params, cov_matrix = so.curve_fit(model, xdata = ostrengths, ydata = fity, p0 = [1,1])
+            best_params, covariant_matrix = so.curve_fit(model, xdata = ostrengths, ydata = fity, p0 = [1,1])
+            xyerror=np.sqrt(np.diagonal(covariant_matrix))
+
             S5=5*np.ones(1000)
 
             if plot2==True:
@@ -233,33 +247,47 @@ def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=Fals
                 plt.ylabel('R To Error Ratio')
                 plt.title('R To Error Ratio At Range Of Strengths')
                 plt.plot(sstrengths, model(sstrengths, best_params[0], best_params[1]), 'r-', label = 'Fit')
+                bound_lower = model(sstrengths, *(best_params - xyerror))
+                bound_upper = model(sstrengths, *(best_params + xyerror))
+                plt.fill_between(sstrengths, bound_lower, bound_upper,color='black', alpha=0.15)
                 plt.plot(sstrengths,S5, label = 'S5')
                 plt.legend()
-                plt.savefig('R To Error Ratio')
+                plt.savefig(f'{foldername}/R To Error Ratio')
 
             crits=(5/best_params[0])**(1/best_params[1])
+            critslow=(5 / (best_params[0] + xyerror[0])) ** (1 / (best_params[1] + xyerror[1]))
+            critshigh=(5/(best_params[0]-xyerror[0]))**(1/(best_params[1]-xyerror[1]))
+            critsv=crits*grms[0]
             critr=model1(crits,best_params1[0])
-
+            critrlow=model1(critslow,best_params1[0])
+            critrhigh=model1(critshigh,best_params1[0])
+            critslowv=critslow*grms[0]
+            critshighv=critshigh*grms[0]
             if crithistogram==True:
                 h = getcorrelation(datafile ,Detector, trials, A, B, dt, strength=crits, histogram=True,crit=True)
-                plt.savefig('Distribution of Correlation Coefficients at Critical Strength:' + str(crits) + '.png')
+                #plt.savefig(f'{foldername}/Distribution of Correlation Coefficients at Critical Strength:' + str(crits) + '.png')
 
             if histogram==True or plot1==True or plot2==True or crithistogram==True:
                 plt.show()
 
             if savedata==True:
+                result='\n\n------------------------------------------------------------------------------------------\n\n'+'Data File: '+datafile+', Detector Number: '+str(Detector)+', Duration of ECM Data Used: '+str(B-A)+'s'+', Time Resolution: '+str(dt)+'s'+', Number of Sampled Strengths: '+str(Nstrengths)+', Number of Rs per Gaussian Fit: '+str(trials)+'\n\n'+'---->Critical Strength in RMS: Lower Bound:'+str(critslow)+'; Estimate: '+str(crits)+'; Upper Bound: '+str(critshigh)+'\nCritical Strength in Volts: Lower Bound:'+str(critslowv)+'; Estimate:'+str(critsv)+'; Upper Bound:'+str(critshighv)+'\nCritical R: Lower Bound: '+str(critrlow)+'; Estimate: '+str(critr)+'; Upper Bound: '+str(critrhigh)
                 with open('Results.txt', 'a') as f:
-                    f.writelines('\n\n'+'Data File: '+datafile+', Detector Number: '+str(Detector)+', Duration of ECM Data Used: '+str(B-A)+'s'+', Time Resolution: '+str(dt)+'s'+', Number of Sampled Strengths: '+str(Nstrengths)+', Number of Rs per Gaussian Fit: '+str(trials)+'\n'+'---->Critical Strength: '+str(crits)+', Critical R: '+str(critr))
+                    f.writelines(result)
                 f.close()
-            return (crits,critr)
+                with open(f'{foldername}/Results.txt', 'a') as f:
+                    f.writelines(result)
+                f.close()
+            return ([crits,(critslow,critshigh)],critsv,critr)
 
-tdata=[]
-mdata=[]
+#tdata=[]
+#mdata=[]
 
-x=find5S('20220104-FRB180814.J422+73-T1.csv',1,11,10,450,550,1/1200,histogram=False,plot1=True,plot2=True,crithistogram=True,savedata=True)
+#x=find5S('20220104-FRB20201124A-T4.csv',1,11,10,180,280,1/2400,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
+x=find5S('20220104-FRB180814.J422+73-T1.csv',1,21,100,500,800,1/1200,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
 print(x)
 
 print('xx')
 
 
-plt.plot(tdata,mdata)
+#plt.plot(tdata,mdata)
