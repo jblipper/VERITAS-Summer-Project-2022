@@ -74,7 +74,7 @@ def gendata(T, dt, noise=2, plot=True, output=True):
     y = np.concatenate([re, im])
     Mi = invF(dt, re, output='yes', absolute='no', positiveoutput='yes', plot='no')
     Ma = np.array(Mi)
-    M = Ma / np.amax(abs(Ma))
+    M = np.real(Ma)/np.amax(abs(np.real(Ma)))
     t = np.arange(0, np.size(M) * dt, dt)
 
     if plot == True:
@@ -193,9 +193,13 @@ def getcorrelation(datafile, Detector, N, a, b, dt, strength=1, plot1=False, plo
 #getcorrelation('20220104-FRB180814.J422+73-T1.csv', 10, 250, 1250, 1 / 1200, strength=5, plot1=True, plot2=True, showrs=True, printoutput=True, histogram=True)
 #plt.show()
 
-def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=False,plot2=False,crithistogram=False,savedata=True):
-    x=np.linspace(0,10,Nstrengths)
-    strengths=list(x)
+def find5S(datafile,Detector,Nstrengths,cores,trials,A,B,dt,histogram=False,plot1=False,plot2=False,crithistogram=False,savedata=True):
+    allstrengths=np.linspace(0,10,Nstrengths)
+    #strengths=list(x)
+    if Nstrengths%cores==0:
+        divs=Nstrengths/cores
+    else:
+        divs=Nstrengths//cores+1
     #r=[]
     if __name__ == '__main__':
         foldername = 'run_' + str(datetime.datetime.now())[:10] + '_' + str(datetime.datetime.now())[11:16]
@@ -206,16 +210,18 @@ def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=Fals
             error = manager.list()
             ostrengths=manager.list()
             grms=manager.list()
-            arguments = []
-            processes = []
-            for i in tqdm(strengths):
-                arguments.append([datafile, Detector, trials, A, B, dt, i, False, False, False, False, histogram, False, r, error, ostrengths, grms, foldername])
-            for i in range(Nstrengths):
-                p = multiprocessing.Process(target=getcorrelation, args=arguments[i])
-                p.start()
-                processes.append(p)
-            for process in processes:
-                process.join()
+            splitstrengths=np.array_split(allstrengths,divs)
+            for strengths in tqdm(splitstrengths):
+                arguments = []
+                processes = []
+                for i in tqdm(strengths):
+                    arguments.append([datafile, Detector, trials, A, B, dt, i, False, False, False, False, histogram, False, r, error, ostrengths, grms, foldername])
+                for i in range(len(strengths)):
+                    p = multiprocessing.Process(target=getcorrelation, args=arguments[i])
+                    p.start()
+                    processes.append(p)
+                for process in processes:
+                    process.join()
             print(grms)
             def model1(t,A):
                 return 1-(1/(np.e**(A*t)))
@@ -284,7 +290,7 @@ def find5S(datafile,Detector,Nstrengths,trials,A,B,dt,histogram=False,plot1=Fals
 #mdata=[]
 
 #x=find5S('20220104-FRB20201124A-T4.csv',1,11,10,180,280,1/2400,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
-x=find5S('20220104-FRB180814.J422+73-T1.csv',1,21,100,500,800,1/1200,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
+x=find5S('20220104-FRB180814.J422+73-T1.csv',1,21,4,250,500,800,1/1200,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
 print(x)
 
 print('xx')
