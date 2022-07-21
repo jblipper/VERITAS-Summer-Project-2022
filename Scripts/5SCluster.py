@@ -198,7 +198,7 @@ def getcorrelation(datafile, Detector, N, a, b, dt, strength=1, plot1=False, plo
 #getcorrelation('20220104-FRB180814.J422+73-T1.csv', 10, 250, 1250, 1 / 1200, strength=5, plot1=True, plot2=True, showrs=True, printoutput=True, histogram=True)
 #plt.show()
 
-def find5S(datafile,outputlocation,ECMRun,Detector,Nstrengths,cores,trials,A,B,dt,histogram=False,plot1=False,plot2=False,crithistogram=False,savedata=True):
+def find5S(datafile,outputlocation,ECMRun,telescope,Detector,Nstrengths,cores,trials,A,B,dt,histogram=False,plot1=False,plot2=False,crithistogram=False,savedata=True):
     allstrengths=np.linspace(0,10,Nstrengths)
     #strengths=list(x)
     if Nstrengths%cores==0:
@@ -208,7 +208,7 @@ def find5S(datafile,outputlocation,ECMRun,Detector,Nstrengths,cores,trials,A,B,d
     #r=[]
     if __name__ == '__main__':
         foldername = 'run_' + str(datetime.datetime.now())[:10] + '_' + str(datetime.datetime.now())[11:16]
-        folderpath=f'{outputlocation}/{ECMRun}/Telescope {Detector}/{foldername}'
+        folderpath=f'{outputlocation}/{ECMRun}/Telescope {telescope}/{foldername}'
         os.makedirs(folderpath, mode=0o777, exist_ok=False)
         #error = []
         with Manager() as manager:
@@ -313,7 +313,7 @@ argts=parser.parse_args()
 if __name__=='__main__':
         samrate=eval(argts.samplerate)
         print(f'hgvhgv{samrate}')
-        x=find5S(argts.datapath,argts.outputpath,argts.ecmrun,argts.telescopenumber,argts.samplestrengths,argts.coresavailable,argts.numbertrials,argts.beginningtime,argts.endtime,samrate,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
+        x=find5S(argts.datapath,argts.outputpath,argts.ecmrun,argts.telescopenumber,1,argts.samplestrengths,argts.coresavailable,argts.numbertrials,argts.beginningtime,argts.endtime,samrate,histogram=True,plot1=True,plot2=True,crithistogram=False,savedata=True)
         print(x)
 
         print('xx')
