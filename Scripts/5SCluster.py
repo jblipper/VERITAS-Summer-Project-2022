@@ -284,7 +284,7 @@ def find5S(datafile,outputlocation,ECMRun,telescope,Detector,Nstrengths,cores,tr
 
             if savedata==True:
                 result='\n\n------------------------------------------------------------------------------------------\n\n'+'Data File: '+datafile+', Detector Number: '+str(Detector)+', Duration of ECM Data Used: '+str(B-A)+'s'+', Time Resolution: '+str(dt)+'s'+', Number of Sampled Strengths: '+str(Nstrengths)+', Number of Rs per Gaussian Fit: '+str(trials)+'\n\n'+'---->Critical Strength in RMS: Lower Bound:'+str(critslow)+'; Estimate: '+str(crits)+'; Upper Bound: '+str(critshigh)+'\nCritical Strength in Volts: Lower Bound:'+str(critslowv)+'; Estimate:'+str(critsv)+'; Upper Bound:'+str(critshighv)+'\nCritical R: Lower Bound: '+str(critrlow)+'; Estimate: '+str(critr)+'; Upper Bound: '+str(critrhigh)
-                with open('Results.txt', 'a') as f:
+                with open(f'{outputlocation}/Results.txt', 'a') as f:
                     f.writelines(result)
                 f.close()
                 with open(f'{folderpath}/Results.txt', 'a') as f:
