@@ -279,8 +279,8 @@ def find5S(datafile,outputlocation,ECMRun,telescope,Detector,Nstrengths,cores,tr
                 h = getcorrelation(datafile ,Detector, trials, A, B, dt, strength=crits, histogram=True,crit=True)
                 #plt.savefig(f'{folderpath}/Distribution of Correlation Coefficients at Critical Strength:' + str(crits) + '.png')
 
-            if histogram==True or plot1==True or plot2==True or crithistogram==True:
-                plt.show()
+            #if histogram==True or plot1==True or plot2==True or crithistogram==True:
+                #plt.show()
 
             if savedata==True:
                 result='\n\n------------------------------------------------------------------------------------------\n\n'+'Data File: '+datafile+', Detector Number: '+str(Detector)+', Duration of ECM Data Used: '+str(B-A)+'s'+', Time Resolution: '+str(dt)+'s'+', Number of Sampled Strengths: '+str(Nstrengths)+', Number of Rs per Gaussian Fit: '+str(trials)+'\n\n'+'---->Critical Strength in RMS: Lower Bound:'+str(critslow)+'; Estimate: '+str(crits)+'; Upper Bound: '+str(critshigh)+'\nCritical Strength in Volts: Lower Bound:'+str(critslowv)+'; Estimate:'+str(critsv)+'; Upper Bound:'+str(critshighv)+'\nCritical R: Lower Bound: '+str(critrlow)+'; Estimate: '+str(critr)+'; Upper Bound: '+str(critrhigh)
